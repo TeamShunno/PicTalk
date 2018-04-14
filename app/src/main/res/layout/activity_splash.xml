@@ -24,8 +24,8 @@
     <View
         android:layout_width="2dp"
         android:layout_height="190dp"
-        android:layout_marginLeft="18dp"
-        android:layout_marginRight="18dp"
+        android:layout_marginLeft="24dp"
+        android:layout_marginRight="24dp"
         android:background="#ecf0f1" />
 
     <RelativeLayout

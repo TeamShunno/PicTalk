@@ -10,7 +10,6 @@
         <item name="android:windowFullscreen">true</item>
 
         <item name="android:textColor">@color/hard_dark</item>
-
     </style>
 
 </resources>
