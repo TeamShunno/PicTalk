@@ -15,19 +15,25 @@ package teamshunno.lab.pictalk;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.speech.tts.TextToSpeech;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.RelativeLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,15 +44,18 @@ import java.util.Locale;
 import teamshunno.lab.pictalk.adapters.ObjectAdapter;
 import teamshunno.lab.pictalk.listeners.OnItemClickListener;
 
-public class MainActivity extends AppCompatActivity implements OnItemClickListener, View.OnClickListener, View.OnLongClickListener {
+public class MainActivity extends AppCompatActivity implements OnItemClickListener, View.OnClickListener, View.OnLongClickListener, PopupMenu.OnMenuItemClickListener {
 
     final int VERB_DO = 0;
     final int VERB_DONT = 1;
     final int VERB_WANT = 2;
     final int VERB_DONT_WANT = 3;
 
+    final String PREF_SPEECH_RATE = "speech_rate";
+
     RelativeLayout mContainer;
     Context mContext;
+    SharedPreferences sharedPref;
     /**
      * Types:
      * 1: General
@@ -59,25 +68,25 @@ public class MainActivity extends AppCompatActivity implements OnItemClickListen
                     {"object_bath", "গোসল করতে"},
                     {"object_home", "বাসায় যেতে"},
                     {"object_wash_hand", "হাত ধুঁতে"},
-                    {"object_bed", "হাটতে যেতে"},
-                    {"object_bath", "বাথরুমে যেতে"},
-                    {"object_home", "পড়াশুনা করতে"},
-                    {"object_wash_hand", "কার্টুন দেখতে"}
+                    {"vec_object_walking", "হাটতে যেতে"},
+                    {"vec_object_toilet", "টয়লেটে যেতে"},
+                    {"vec_object_study", "পড়াশুনা করতে"},
+                    {"vec_object_cartoon", "কার্টুন দেখতে"}
             },
             {
-                    {"object_bed", "পানি খেতে"},
-                    {"object_bed", "শরবত খেতে"},
-                    {"object_bath", "চকলেট"},
-                    {"object_home", "মাছ খেতে"},
-                    {"object_wash_hand", "মাংস খেতে"},
-                    {"object_bed", "মুরগি খেতে"},
-                    {"object_bath", "ফল খেতে"}
+                    {"vec_object_water", "পানি খেতে"},
+                    {"vec_object_juice", "শরবত খেতে"},
+                    {"vec_object_chocolate", "চকলেট"},
+                    {"vec_object_fish", "মাছ খেতে"},
+                    {"vec_object_meat", "মাংস খেতে"},
+                    {"vec_object_chicken", "মুরগি খেতে"},
+                    {"vec_object_apple", "ফল খেতে"}
             },
             {
-                    {"object_bed", "ঘুমাতে"},
-                    {"object_bath", "গোসল করতে"},
-                    {"object_home", "বাসায় যেতে"},
-                    {"object_wash_hand", "হাত ধুঁতে"}
+                    {"vec_object_ball", "বল"},
+                    {"vec_object_doll", "পুতুল"},
+                    {"vec_object_car", "গাড়ি"},
+                    {"vec_object_pencils", "রং পেন্সিল"}
             }
     };
     RecyclerView mRecyclerView;
@@ -99,6 +108,7 @@ public class MainActivity extends AppCompatActivity implements OnItemClickListen
     ImageButton buttonBackSpace;
     ImageButton buttonAbout;
     int active_type = 0;
+    int speech_rate = 10;
     boolean isBackPressed = false;
     private TextToSpeech mTTS;
 
@@ -111,6 +121,8 @@ public class MainActivity extends AppCompatActivity implements OnItemClickListen
         mContainer = findViewById(R.id.main_container);
 
         mContext = MainActivity.this;
+
+        sharedPref = MainActivity.this.getSharedPreferences(getPackageName(), MODE_PRIVATE);
 
         activeObjectImageView = findViewById(R.id.preview_object_image);
         activeObjectTextView = findViewById(R.id.preview_object_name);
@@ -183,6 +195,8 @@ public class MainActivity extends AppCompatActivity implements OnItemClickListen
     protected void onStart() {
         super.onStart();
 
+        speech_rate = sharedPref.getInt(PREF_SPEECH_RATE, 10);
+
         /**
          * Text to Speech
          */
@@ -191,6 +205,8 @@ public class MainActivity extends AppCompatActivity implements OnItemClickListen
             public void onInit(int status) {
                 if (status != TextToSpeech.ERROR) {
                     int result = mTTS.setLanguage(new Locale("bn_BD"));
+
+                    setSpeechRate();
 
 //                    Log.e("aaa", mTTS.getAvailableLanguages().toString());
 
@@ -234,10 +250,17 @@ public class MainActivity extends AppCompatActivity implements OnItemClickListen
 
     @Override
     public void onClick(int position) {
-        Log.e("aaa", String.valueOf(position));
-
         activeObjectTextView.setText(mDataset[active_type][position][1]);
-        Picasso.get().load(getResources().getIdentifier(mDataset[active_type][position][0], "drawable", BuildConfig.APPLICATION_ID)).into(activeObjectImageView);
+
+        if (mDataset[active_type][position][0].startsWith("vec_")) {
+            activeObjectImageView
+                    .setImageDrawable(ContextCompat.getDrawable(mContext, mContext.getResources().getIdentifier(mDataset[active_type][position][0], "drawable", BuildConfig.APPLICATION_ID)));
+        } else {
+            Picasso.get()
+                    .load(getResources().getIdentifier(mDataset[active_type][position][0], "drawable", BuildConfig.APPLICATION_ID))
+                    .into(activeObjectImageView);
+
+        }
 
     }
 
@@ -248,14 +271,21 @@ public class MainActivity extends AppCompatActivity implements OnItemClickListen
             case R.id.buttonVerbPositive:
                 activeVerbImageView.setImageDrawable(((ImageView) v).getDrawable());
                 activeVerbImageView.setTag(VERB_WANT);
+
+                speakNow();
+
                 break;
             case R.id.buttonVerbNegative:
                 activeVerbImageView.setImageDrawable(((ImageView) v).getDrawable());
                 activeVerbImageView.setTag(VERB_DONT_WANT);
+
+                speakNow();
+
                 break;
 
             case R.id.buttonSpeak:
-                mTTS.speak(getPreviewText(), TextToSpeech.QUEUE_FLUSH, null);
+
+                speakNow();
                 break;
 
             case R.id.buttonBackSpace:
@@ -269,7 +299,7 @@ public class MainActivity extends AppCompatActivity implements OnItemClickListen
                 break;
 
             case R.id.button_about:
-                Toast.makeText(mContext, "Hold the Button to view About Us", Toast.LENGTH_LONG).show();
+                Toast.makeText(mContext, "Hold the Button to view Settings menu", Toast.LENGTH_LONG).show();
                 break;
 
             /**
@@ -322,25 +352,29 @@ public class MainActivity extends AppCompatActivity implements OnItemClickListen
         switch (v.getId()) {
             case R.id.button_about:
 
-                AlertDialog.Builder aboutDialog = new AlertDialog.Builder(mContext);
-
-                aboutDialog.setIcon(R.drawable.ic_info_outline_black_24dp);
-                aboutDialog.setTitle(getString(R.string.app_name));
-                aboutDialog.setMessage("Version " + BuildConfig.VERSION_NAME +
-                        "\n" + "\n" +
-                        "This Project is developed by—" +
-                        "\n" +
-                        getString(R.string.team_shunno) +
-                        "\n" + "\n" +
-                        "This is an Open-Source Project under MPL 2.0" +
-                        "\n" +
-                        "Copyright ©  " + getString(R.string.team_shunno));
-                aboutDialog.show();
+                PopupMenu popupMenu = new PopupMenu(mContext, v);
+                popupMenu.setOnMenuItemClickListener(this);
+                MenuInflater inflater = popupMenu.getMenuInflater();
+                inflater.inflate(R.menu.option_menu, popupMenu.getMenu());
+                popupMenu.show();
 
                 return true;
         }
 
         return false;
+    }
+
+//    boolean isPreviewCompleted() {
+//        if (!activeObjectTextView.getText().toString().isEmpty()
+//                && Integer.valueOf(activeVerbImageView.getTag().toString()) != -1) {
+//            return true;
+//        }
+//
+//        return false;
+//    }
+
+    void speakNow() {
+        mTTS.speak(getPreviewText(), TextToSpeech.QUEUE_FLUSH, null);
     }
 
     /**
@@ -374,4 +408,65 @@ public class MainActivity extends AppCompatActivity implements OnItemClickListen
 //        return "কি করতে চাও?";
     }
 
+    @Override
+    public boolean onMenuItemClick(MenuItem item) {
+
+        switch (item.getItemId()) {
+            case R.id.speech_rate:
+
+                AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+                final SeekBar seekBar = new SeekBar(mContext);
+                seekBar.setMax(10);
+                seekBar.setProgress(speech_rate);
+
+                builder.setView(seekBar);
+                builder.setTitle("Change Speech Rate");
+                builder.setPositiveButton(R.string.change, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        speech_rate = seekBar.getProgress();
+
+                        SharedPreferences.Editor editor = sharedPref.edit();
+                        editor.putInt(PREF_SPEECH_RATE, speech_rate);
+                        editor.apply();
+
+                        setSpeechRate();
+                    }
+                });
+                builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                    }
+                });
+
+                builder.show();
+
+                return true;
+
+            case R.id.about:
+
+                AlertDialog.Builder aboutDialog = new AlertDialog.Builder(mContext);
+
+                aboutDialog.setIcon(R.drawable.ic_info_outline_black_24dp);
+                aboutDialog.setTitle(getString(R.string.app_name));
+                aboutDialog.setMessage("Version " + BuildConfig.VERSION_NAME +
+                        "\n" + "\n" +
+                        "This Project is developed by—" +
+                        "\n" +
+                        getString(R.string.team_shunno) +
+                        "\n" + "\n" +
+                        "This is an Open-Source Project under MPL 2.0" +
+                        "\n" +
+                        "Copyright ©  " + getString(R.string.team_shunno));
+                aboutDialog.show();
+
+                return true;
+        }
+
+        return false;
+    }
+
+    void setSpeechRate() {
+        mTTS.setSpeechRate((float) (speech_rate / 10.0));
+    }
 }

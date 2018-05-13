@@ -2,6 +2,7 @@ package teamshunno.lab.pictalk.adapters;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -43,7 +44,16 @@ public class ObjectAdapter extends RecyclerView.Adapter<ObjectViewHolder> {
     public void onBindViewHolder(@NonNull ObjectViewHolder holder, int position) {
         holder.objectDescription.setTag(position);
         holder.objectDescription.setText(mDataset[mActiveType][position][1]);
-        Picasso.get().load(mContext.getResources().getIdentifier(mDataset[mActiveType][position][0], "drawable", BuildConfig.APPLICATION_ID)).into(holder.objectImage);
+
+        if (mDataset[mActiveType][position][0].startsWith("vec_")) {
+            holder.objectImage
+                    .setImageDrawable(ContextCompat.getDrawable(mContext, mContext.getResources().getIdentifier(mDataset[mActiveType][position][0], "drawable", BuildConfig.APPLICATION_ID)));
+        } else {
+            Picasso.get()
+                    .load(mContext.getResources().getIdentifier(mDataset[mActiveType][position][0], "drawable", BuildConfig.APPLICATION_ID))
+                    .into(holder.objectImage);
+        }
+
     }
 
     @Override

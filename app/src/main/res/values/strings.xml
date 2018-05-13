@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">PicTalk for Special People</string>
     <string name="team_shunno">টিম শূন্য</string>
+    <string name="change">Change</string>
+    <string name="cancel">Cancel</string>
 </resources>
